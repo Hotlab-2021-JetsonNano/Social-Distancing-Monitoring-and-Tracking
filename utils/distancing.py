@@ -1,183 +1,226 @@
 import cv2
 import itertools
+import numpy as np
+from utils.distancing_class import Configs, Person, IdTable
+from scipy.spatial import ConvexHull
 
-class Colors:
-    def __init__(self):
-        self.blue = [255, 0, 0]
-        self.yellow = [0, 255, 255]
-        self.red = [0, 0, 255]
-        self.green = [0, 255, 0]
+def calculate_box(box):
+    pLeft, pTop, pRight, pBot = box
+    height = int(pBot - pTop)
+    coord  = (int(pLeft + pRight) //2, int(pBot))  # bottom
+    return height, coord
 
-class Configs:
-    def __init__(self, img):
-        self.colors = Colors()
-        self.fontScale = round(0.001 * (img.shape[0] + img.shape[1]) / 2) + 1
-        self.fontThickness = max(self.fontScale - 1, 1)
-        self.lineThickness = 2
-        self.lineType = cv2.LINE_AA
-        self.radius = 4
+def is_valid(idTable, person1, person2):
+    validHeights = abs(person1.get_height() - person2.get_height()) < 30 ## need to be fixed
     
-    def get_colors(self): 
-        return self.colors
+    diffThres  = person1.get_height() + person2.get_height()
+    validDistance = abs(person1.get_coord()[0] - person2.get_coord()[0]) < diffThres and \
+                    abs(person1.get_coord()[1] - person2.get_coord()[1]) < diffThres
 
-    def get_figure(self):
-        return self.fontScale / 3, self.fontThickness, self.lineThickness, self.lineType, self.radius
+    parentId1 = idTable.find_parentId(person1.get_id())
+    parentId2 = idTable.find_parentId(person2.get_id())
+    validParents = parentId1 != parentId2
 
-class Person:
-    def __init__(self, height, coord):
-        self.height = height
-        self.coord = coord
-        self.redCount = 0
-        self.updated = False
-
-    def get_height(self):
-        return self.height
-
-    def set_height(self, height):
-        self.height = height
-        return
-
-    def get_coord(self):
-        return self.coord
-
-    def set_coord(self, coord):
-        self.coord = coord
-        return
-
-    def get_updated(self):
-        return self.updated
-
-    def set_updated(self, value):
-        self.updated = value
-        return
-
-    def get_redCount(self):
-        return self.redCount
-    
-    def inc_redCount(self):
-        self.redCount += 1
-        return
-
-    def is_not_red(self):
-        return self.redCount == 0
-
-    def clear_redCount(self):
-        self.redCount = 0
-        return
-
+    return validHeights and validDistance and validParents
 
 def calculate_distance(point1, point2):
     x1, y1 = point1
     x2, y2 = point2
     return ((x2 - x1)**2 + (y2 - y1)**2) **0.5
-    
-def is_valid_height_difference(height1, height2):
-    return abs(height1 - height2) > 30
 
 def calculate_distance_threshold(height1, height2):
-    imgRatio = (height1 + height2) / (170 + 170)
-    distHighRisk = 200 * imgRatio
-    distLowRisk = 250 * imgRatio
+    pixelRatio = (height1 + height2) / (170 + 170)
+    distHighRisk = 200 * pixelRatio
+    distLowRisk  = 250 * pixelRatio
     return distHighRisk, distLowRisk
 
-def show_distancing(img, boxes, peopleList):
-    config = Configs(img)
-    color = config.get_colors()
-    fontScale, fontThickness, lineThickness, lineType, radius = config.get_figure()
-
-    isFirstFrame = (len(peopleList) == 0)
-
-    for box in boxes:
-        ## new data
-        pLeft, pTop, pRight, pBot = box
-        height = int(pBot - pTop)
-        newCoord = (int(pLeft + pRight) //2, int(pBot))  # bottom
-
-        if isFirstFrame:
-            peopleList.append(Person(height, newCoord))
-
-        ## update coord
-        else :
-            minDistance = 30
-            minDistanceIdx = -1
-
-            for idx, person in enumerate(peopleList):
-                if person.get_updated() is True:
-                    continue
-
-                distance = calculate_distance(newCoord, person.get_coord())
-                if minDistance > distance:
-                    minDistance = distance
-                    minDistanceIdx = idx
-            
-            if minDistanceIdx == -1:
-                newPerson = Person(height, newCoord)
-                newPerson.set_updated(True)
-                peopleList.append(newPerson)
-            else :
-                peopleList[minDistanceIdx].set_height(height)
-                peopleList[minDistanceIdx].set_coord(newCoord)
-                peopleList[minDistanceIdx].set_updated(True)
-        
-        cv2.circle(img, newCoord, config.radius, color.green, -1) ## bottom circle 2
-        #cv2.putText(img, str(id), (pLeft, pTop), 0, fontScale, colorBlue, fontThickness, lineType) ##
-        #cv2.putText(img, str(height), (pLeft, pTop), 0, tl / 3, colorBlue, thickness=tf, lineType=cv2.LINE_AA) ##
-
-    ## remove people not updated
-    newPeopleList = []
-    for person in peopleList:
-        if person.get_updated() is True:
-            person.set_updated(False)
-            newPeopleList.append(person)
-            cv2.putText(img, str(person.get_redCount()), person.get_coord(), 0, fontScale, color.red, fontThickness, lineType) 
-    peopleList = newPeopleList
-
-    ## make combinations of idx
+def create_idx_combination(peopleList):
     peopleIdx = list(range(len(peopleList))) ## 0, 1, 2, ..... , peopleList length
     peopleIdxCombi = list(itertools.combinations(peopleIdx, 2))
+    return peopleIdxCombi
 
-    for idx1, idx2 in peopleIdxCombi:
-        person1 = peopleList[idx1]
-        person2 = peopleList[idx2]
+def tracking_algorithm(height, coord, frameData):
+    minDistance = 150 * (height / 170)
+    minDistanceIdx = -1
 
-        ## Ignore Perspective
-        if is_valid_height_difference(person1.get_height(), person2.get_height()):
+    # find closest person
+    for idx, person in enumerate(frameData.peopleList):
+        distance = calculate_distance(coord, person.get_coord())
+        if minDistance > distance:
+            minDistance = distance
+            minDistanceIdx = idx
+
+    # (success tracking)
+    # if found 
+    if minDistanceIdx != -1:
+        person = frameData.get_person(minDistanceIdx)
+        frameData.remove_person(minDistanceIdx)
+        person.set_height(height)
+        person.set_coord(coord)
+        person.clear_missCount()
+        return person
+
+    # (fail tracking)
+    # if not found and has candidate 
+    if frameData.get_valid_len() > 0:
+        id = frameData.get_valid_min()
+    # if not found and has no candidate
+    else :
+        id = -1
+    
+    return Person(id, height, coord)
+
+def distancing_algorithm(idTable, person1, person2, frameTime):
+    ## get distance info
+    dist = calculate_distance(person1.get_coord(), person2.get_coord())
+    distHighRisk, distLowRisk = calculate_distance_threshold(person1.get_height(), person2.get_height())  ## Calculate with Image Ratio
+
+    ## high risk
+    if dist < distHighRisk:
+        idTable.merge_parentIds(person1.get_id(), person2.get_id())
+        if not person1.is_updated():
+            person1.inc_riskTime(frameTime)
+            person1.set_updated(True)
+        if not person2.is_updated():
+            person2.inc_riskTime(frameTime)
+            person2.set_updated(True)
+    
+    ## low risk
+    elif distHighRisk < dist and dist < distLowRisk:
+        person1.set_yellow(True)
+        person2.set_yellow(True)
+
+    return
+
+def grouping_algorithm(img, config, idTable, frameNumber):
+    color = config.get_colors()
+    imgRatio, fontScale, fontThickness, lineType, radius = config.get_figure()
+    imgRatio = int(10 * imgRatio)
+
+    log = ''
+
+    for person in idTable.get_people():
+        x, y = person.get_coord()
+
+        ## Show Risk Time
+        cv2.putText(img, str(person.get_riskTime()), (x, y), 0, fontScale, color.black, fontThickness, lineType)
+     
+        ## Show Height
+        # x1 = x - imgRatio
+        # y1 = y - int(person.get_height() / 2)
+        # cv2.putText(img, str(person.get_height()), (x1, y1), 0, fontScale, color.blue, fontThickness, lineType)
+
+        ## Show Person Id   
+        #cv2.putText(img, str(person.get_id()), (x1, y1), 0, fontScale, color.blue, fontThickness, lineType)
+        
+        ## Draw Green Circle
+        if not person.is_updated():
+            person.clear_riskTime()
+            if person.is_yellow():
+                cv2.circle(img, person.get_coord(), radius, color.yellow, -1)
+            else :
+                cv2.circle(img, person.get_coord(), radius, color.green, -1)
             continue
+        
+        ## Red
+        person.set_updated(False)
 
-        ## get distance info
-        dist = calculate_distance(person1.get_coord(), person2.get_coord())
-        distHighRisk, distLowRisk = calculate_distance_threshold(person1.get_height(), person2.get_height())  ## Calculate with Image Ratio
+        ## Show Red Circle
+        cv2.circle(img, person.get_coord(), radius, color.red, -1)
 
-        ## high risk
-        if dist < distHighRisk:
-            if person1.get_updated() is False:
-                person1.inc_redCount()
-                person1.set_updated(True)
-            if person2.get_updated() is False:
-                person2.inc_redCount()
-                person2.set_updated(True)                    
-            
-            cv2.line(img, person1.get_coord(), person2.get_coord(), color.red, lineThickness)
-            cv2.circle(img, person1.get_coord(), radius, color.red, -1)
-            cv2.circle(img, person2.get_coord(), radius, color.red, -1)
+        ## Show Red Count
+        # cv2.putText(img, str(person.get_redCount()), (x, y), 0, fontScale, color.red, fontThickness, lineType)
+        
+        ## Show Definite Risk
+        if person.is_definite_risk():
+            x1 = x - imgRatio
+            y1 = y - int(person.get_height() / 2)
+            cv2.putText(img, "RISK", (x1, y1), 0, fontScale, color.red, fontThickness, lineType)
+            log += 'frame : {f} | person : {i} | risk time : {t}s \n'.format(
+                f=str(frameNumber).rjust(5), 
+                i=str(person.get_id()).rjust(5), 
+                t=str(person.get_riskTime()).rjust(8))
+        
+        ## Set Group List
+        idTable.set_groupList(person.get_id(), person.get_coord())
 
-        ## low risk
-        elif dist >= distHighRisk and dist < distLowRisk:
-            if person1.get_updated() is False:
-                person1.clear_redCount()
-            if person2.get_updated() is False:
-                person2.clear_redCount()
-            
-            cv2.line(img, person1.get_coord(), person2.get_coord(), color.yellow, lineThickness)
-            if person1.is_not_red():
-                cv2.circle(img, person1.get_coord(), radius, color.yellow, -1)
-            if person2.is_not_red():
-                cv2.circle(img, person2.get_coord(), radius, color.yellow, -1)
+    return img, log
 
-    for idx in peopleIdx:
-        if peopleList[idx].get_updated() is False:
-            peopleList[idx].clear_redCount()
-        else :
-            peopleList[idx].set_updated(False)
+def draw_polygons(img, config, idTable):
+    color = config.get_colors()
+    overlay = img.copy()
+    opacity = 0.5
 
+    for polyCoords in idTable.get_groupList():
+        if len(polyCoords) >= 2:
+            try:
+                hull = ConvexHull(polyCoords)
+            except:
+                pass
+            else:
+                polyCoords = [[polyCoords[idx]] for idx in hull.vertices]
+            cv2.fillConvexPoly(overlay, np.array(polyCoords), color.red)
+
+    cv2.addWeighted(overlay, opacity, img, 1 - opacity, 0, img)
     return img
+
+def show_distancing(img, boxes, frameData):
+
+    if len(boxes) == 0:
+        return img
+
+    idTable = IdTable()
+    peopleList = idTable.get_people()
+
+    ## first frame
+    if frameData.get_people_len() == 0:
+        for id, box in enumerate(boxes):
+            height, coord = calculate_box(box)
+            peopleList.append(Person(id, height, coord))
+
+    ## next frame
+    else :
+### Tracking Algorithm
+        for box in boxes:
+            height, coord = calculate_box(box)
+            person = tracking_algorithm(height, coord, frameData)
+            peopleList.append(person)
+
+### Check Untracked people
+    frameData.init_invalid()
+
+### Distancing Algorithm
+    ## create id info table
+    idTable.init_idList(frameData.get_invalid())
+
+    ## make combinations of idx
+    peopleIdxCombi = create_idx_combination(peopleList)
+
+    ## frame time
+    fps = frameData.get_fps()    
+    frameTime = round(1 / fps, 2) if (fps > 0.0) else 0.0
+
+    ## distancing between two people
+    for index1, index2 in peopleIdxCombi:
+        person1, person2 = peopleList[index1], peopleList[index2]
+        if is_valid(idTable, person1, person2):
+            distancing_algorithm(idTable, person1, person2, frameTime)
+
+### Grouping Algorithm
+    config = Configs(img)
+    idTable.init_groupList()
+    
+    img, log = grouping_algorithm(img, config, idTable, frameData.get_counter())
+    img = draw_polygons(img, config, idTable)
+
+### Check Undetected people
+    for person in frameData.get_people():
+        if person.is_erasable(img.shape[:2]) or person.is_missable():
+            frameData.set_valid(person.get_id())
+        else :
+            person.inc_missCount()
+            idTable.add_person(person)
+
+    frameData.set_people(idTable.get_people())
+
+    return img, log
