@@ -8,7 +8,6 @@ TensorRT optimized YOLO engine.
 import os
 import time
 import argparse
-#import pdb
 
 import cv2
 import pycuda.autoinit  # This is needed for initializing CUDA driver
@@ -18,7 +17,6 @@ from utils.camera import add_camera_args, Camera
 from utils.display import open_window, set_display, show_fps
 from utils.visualization import BBoxVisualization
 from utils.yolo_with_plugins import TrtYOLO
-from utils.distancing import show_distancing
 
 
 WINDOW_NAME = 'TrtYOLODemo'
@@ -59,33 +57,21 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
     full_scrn = False
     fps = 0.0
     tic = time.time()
-
-    peopleList = []
-    validIdList   = set([])
-    invalidIdList = set([])
-
     while True:
         if cv2.getWindowProperty(WINDOW_NAME, 0) < 0:
             break
         img = cam.read()
         if img is None:
             break
-
         boxes, confs, clss = trt_yolo.detect(img, conf_th)
-
-        # write on image
-        img, peopleList, validIdList, invalidIdList = show_distancing(img, boxes, fps, peopleList, validIdList, invalidIdList)
+        img = vis.draw_bboxes(img, boxes, confs, clss)
         img = show_fps(img, fps)
         cv2.imshow(WINDOW_NAME, img)
-        
-        # calculate an exponentially decaying average of fps number
         toc = time.time()
-#        print("run_algorithm  : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(7), "ms") ##
-
         curr_fps = 1.0 / (toc - tic)
+        # calculate an exponentially decaying average of fps number
         fps = curr_fps if fps == 0.0 else (fps*0.95 + curr_fps*0.05)
         tic = toc
-
         key = cv2.waitKey(1)
         if key == 27:  # ESC key: quit program
             break

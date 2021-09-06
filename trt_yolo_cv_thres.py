@@ -18,9 +18,6 @@ import pycuda.autoinit  # This is needed for initializing CUDA driver
 from utils.yolo_classes import get_cls_dict
 from utils.visualization import BBoxVisualization
 from utils.yolo_with_plugins import TrtYOLO
-from utils.display import show_fps
-from utils.distancing import show_distancing
-from utils.distancing_class import FrameData
 
 
 def parse_args():
@@ -35,14 +32,10 @@ def parse_args():
         '-o', '--output', type=str, required=True,
         help='output video file name')
     parser.add_argument(
-        '-f', '--file', type=str, required=False,
-        help='output text file name')
-    parser.add_argument(
         '-c', '--category_num', type=int, default=80,
         help='number of object categories [80]')
     parser.add_argument(
-        '-m', '--model', type=str, required=False,
-        default='yolov4-tiny-crowd-416',
+        '-m', '--model', type=str, required=True,
         help=('[yolov3-tiny|yolov3|yolov3-spp|yolov4-tiny|yolov4|'
               'yolov4-csp|yolov4x-mish]-[{dimension}], where '
               '{dimension} could be either a single number (e.g. '
@@ -54,7 +47,7 @@ def parse_args():
     return args
 
 
-def loop_and_detect(cap, trt_yolo, conf_th, vis, writer, filePath):
+def loop_and_detect(cap, trt_yolo, conf_th, vis, writer):
     """Continuously capture images from camera and do object detection.
 
     # Arguments
@@ -64,33 +57,45 @@ def loop_and_detect(cap, trt_yolo, conf_th, vis, writer, filePath):
       vis: for visualization.
       writer: the VideoWriter object for the output video.
     """
-    file = open(filePath, 'w')
-
-    frameData = FrameData()
-    frameData.set_timer()
+    
+    #boxLength = 0
+    runtime = 0.0
+    fps = 0.0
+    tic = time.time()
 
     while True:
         ret, frame = cap.read()
         if frame is None:  break
         boxes, confs, clss = trt_yolo.detect(frame, conf_th)
-
-        frame, log = show_distancing(frame, boxes, frameData)
-        frame = show_fps(frame, frameData.get_fps())
-
+        frame = vis.draw_bboxes(frame, boxes, confs, clss)
         writer.write(frame)
-        file.write(log)
-
-        frameData.increase_counter()
-        frameData.update_fps()
-
         print('.', end='', flush=True)
 
-    file.close()
+        boxLength = len(boxes)
+        toc = time.time()
+        runtime = toc - tic
+        #print("run_algorithm  : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(7), "ms") ##
+        curr_fps = 1.0 / (toc - tic)
+        fps = curr_fps if fps == 0.0 else (fps*0.95 + curr_fps*0.05)
+        tic = toc
+
+    print(" ")
+    #print("box_length = " + str(boxLength))
+    print("run  : ", '{:.2f}'.format(round(runtime * 1000, 2)).rjust(7), "ms")
+    print("fps  : ", '{:.2f}'.format(round(fps, 2)).rjust(7), "fps")
+
     print('\nDone.')
 
 
 def main():
     args = parse_args()
+    
+    conf_th = 0.3
+    # number = 0
+
+    # while conf_th < 10:
+    print("conf_threshold = " + str(conf_th))
+
     if args.category_num <= 0:
         raise SystemExit('ERROR: bad category_num (%d)!' % args.category_num)
     if not os.path.isfile('yolo/%s.trt' % args.model):
@@ -108,12 +113,15 @@ def main():
     vis = BBoxVisualization(cls_dict)
     trt_yolo = TrtYOLO(args.model, args.category_num, args.letter_box)
 
-    filePath = args.file
-
-    loop_and_detect(cap, trt_yolo, conf_th=0.3, vis=vis, writer=writer, filePath=filePath)
+    loop_and_detect(cap, trt_yolo, conf_th=(conf_th), vis=vis, writer=writer)
 
     writer.release()
     cap.release()
+
+    # conf_th += 1
+    # number += 1
+    # args.output = str(args.output[:-5] + str(conf_th) + ".mp4")
+
 
 
 if __name__ == '__main__':
