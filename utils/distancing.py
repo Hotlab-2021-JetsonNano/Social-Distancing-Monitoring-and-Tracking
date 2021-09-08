@@ -53,11 +53,8 @@ def tracking_algorithm(height, coord, frameData):
     # (success tracking)
     # if found 
     if minDistanceIdx != -1:
-        person = frameData.get_person(minDistanceIdx)
-        frameData.remove_person(minDistanceIdx)
-        person.set_height(height)
-        person.set_coord(coord)
-        person.clear_missCount()
+        person = frameData.poll_person(minDistanceIdx)
+        person.reset(height, coord)
         return person
 
     # (fail tracking)
@@ -92,12 +89,10 @@ def distancing_algorithm(idTable, person1, person2, frameTime):
 
     return
 
-def grouping_algorithm(img, config, idTable, frameNumber):
+def grouping_algorithm(img, config, idTable, frameData):
     color = config.get_colors()
     imgRatio, fontScale, fontThickness, lineType, radius = config.get_figure()
     imgRatio = int(10 * imgRatio)
-
-    log = ''
 
     for person in idTable.get_people():
         x, y = person.get_coord()
@@ -123,8 +118,6 @@ def grouping_algorithm(img, config, idTable, frameNumber):
             continue
         
         ## Red
-        person.set_updated(False)
-
         ## Show Red Circle
         cv2.circle(img, person.get_coord(), radius, color.red, -1)
 
@@ -136,15 +129,18 @@ def grouping_algorithm(img, config, idTable, frameNumber):
             x1 = x - imgRatio
             y1 = y - int(person.get_height() / 2)
             cv2.putText(img, "RISK", (x1, y1), 0, fontScale, color.red, fontThickness, lineType)
-            log += 'frame : {f} | person : {i} | risk time : {t}s \n'.format(
-                f=str(frameNumber).rjust(5), 
-                i=str(person.get_id()).rjust(5), 
-                t=str(person.get_riskTime()).rjust(8))
+            frameData.update_log(
+                'frame : {f} | person : {i} | risk time : {t}s \n'.format(
+                    f=str(frameData.get_counter()).rjust(5), 
+                    i=str(person.get_id()).rjust(5), 
+                    t=str(person.get_riskTime()).rjust(8)
+                )
+            )
         
         ## Set Group List
         idTable.set_groupList(person.get_id(), person.get_coord())
 
-    return img, log
+    return img
 
 def draw_polygons(img, config, idTable):
     color = config.get_colors()
@@ -210,7 +206,7 @@ def show_distancing(img, boxes, frameData):
     config = Configs(img)
     idTable.init_groupList()
     
-    img, log = grouping_algorithm(img, config, idTable, frameData.get_counter())
+    img = grouping_algorithm(img, config, idTable, frameData)
     img = draw_polygons(img, config, idTable)
 
 ### Check Undetected people
@@ -223,4 +219,4 @@ def show_distancing(img, boxes, frameData):
 
     frameData.set_people(idTable.get_people())
 
-    return img, log
+    return img
