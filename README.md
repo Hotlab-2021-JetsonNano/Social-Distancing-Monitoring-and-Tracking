@@ -3,14 +3,9 @@ This is a project which implement high-quality social-distancing monitoring syst
 This allows tracking people on the video, categorizing person as 'definite risk' if he/she exceeds a 'threshold time' we set.
   
 ## Key features
-### Model
-YOLOv4  
-YOLOv4-tiny  
-YOLOv4-tiny-3L  
-(AP/FPS comparison datasheet)  
-The runtime is evaluated with 640 pixel demo video.
-![image](https://user-images.githubusercontent.com/70895582/132535338-2068bc85-00b9-49c1-ae6e-c24ddb20978d.png)
-
+### Model 
+The runtime on the table below is evaluated with 640 pixel demo video.
+<img src="demo/table-runtime-comparison.jpg" width="70%" height="70%"></img><br/>
 
 Among these models, YOLOv4-tiny-3L showed the best balance between AP and FPS.
   
