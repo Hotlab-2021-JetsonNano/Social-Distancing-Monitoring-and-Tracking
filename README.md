@@ -10,7 +10,7 @@ YOLOv4-tiny-3L
 (AP/FPS comparison datasheet)  
 Among these models, YOLOv4-tiny-3L showed the best balance between AP and FPS.
 ### TensorRT
-  
+-
 ### Transfer Learning
 Since the model only has to detect human, we did transfer learning of YOLOv4-tiny-3L with crowd-human dataset.  
 AP of the model improved.  
