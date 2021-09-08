@@ -8,6 +8,10 @@ YOLOv4
 YOLOv4-tiny  
 YOLOv4-tiny-3L  
 (AP/FPS comparison datasheet)  
+The runtime is evaluated with 640 pixel demo video.
+![image](https://user-images.githubusercontent.com/70895582/132535338-2068bc85-00b9-49c1-ae6e-c24ddb20978d.png)
+
+
 Among these models, YOLOv4-tiny-3L showed the best balance between AP and FPS.
   
 ### TensorRT
