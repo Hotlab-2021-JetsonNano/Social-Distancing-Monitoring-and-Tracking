@@ -33,5 +33,5 @@ AP of the model improved.
 * TensorRT demo code : https://github.com/jkjung-avt/tensorrt_demos
 * Crowd-Human Dataset : 
 * Transfer-Learning demo code : 
-* (Comparison) Social-Distancing using YOLOv5 : https://github.com/ChargedMonk/Social-Distancing-using-YOLOv5
-* (Comparison) Social-Distancing Monitoring :  https://github.com/dongfang-steven-yang/social-distancing-monitoring
+* Social-Distancing using YOLOv5 : https://github.com/ChargedMonk/Social-Distancing-using-YOLOv5
+* Social-Distancing Monitoring :  https://github.com/dongfang-steven-yang/social-distancing-monitoring
