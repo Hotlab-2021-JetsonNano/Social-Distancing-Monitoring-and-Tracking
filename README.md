@@ -20,17 +20,17 @@ AP of the model improved.
 <img src="demo/video-tracking-def.gif" width="50%" height="50%"></img><br/>
 
 ## Usage
-'''script  
+```script  
   ## Streaming Mode
   $ python3 trt_yolo.py --model yolov4-tiny-3l-crowd-416 \
                         --video source_video/myvideo.mp4
-  
+                        
   ## Saving Mode
   $ python3 trt_yolo_cv.py --model yolov4-tiny-3l-crowd-416 \
                            --video source_video/myvideo.mp4 \
                            --output output_video/myoutputvideo.mp4 \
                            --file output_file/myoutputlog.txt
-'''
+```
   
 ## Environment
 * Platform: Jetson Nano Developer Kit 4GB
