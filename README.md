@@ -4,7 +4,7 @@ This allows tracking people on the video, categorizing person as 'definite risk'
   
 ## Key features
 ### Model 
-<img src="demo/table-runtime-analysis.jpg" width="70%" height="70%"></img><br/>  
+<img src="demo/table-runtime-analysis.jpg" width="60%" height="60%"></img><br/>  
 The runtime on the table above is evaluated with 640 pixel demo video.
 Among these models, YOLOv4-tiny-3L showed the best balance between AP and FPS.
   
@@ -45,12 +45,12 @@ AP of the model improved.
 <img src="demo/video-monitoring-full.gif" width="70%" height="70%"></img><br/>
 
 ## Improvements
-[] Consider Jetson Xavier as a platform
-[] Model Analysis of YOLOv4-tiny-3L
-[] Mdoel Optimization of YOLOv4-tiny-3L
-[] Algorithm Optimization with GPU Programming
-[] Test on Real-time environment
-[] Website streaming service using OpenCV, Flask
+ [] Consider Jetson Xavier as a platform
+ [] Model Analysis of YOLOv4-tiny-3L
+ [] Mdoel Optimization of YOLOv4-tiny-3L
+ [] Algorithm Optimization with GPU Programming
+ [] Test on Real-time environment
+ [] Website streaming service using OpenCV, Flask
   
 ## References
 * TensorRT demo code : https://github.com/jkjung-avt/tensorrt_demos
