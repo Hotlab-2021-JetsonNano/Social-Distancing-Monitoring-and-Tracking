@@ -36,9 +36,17 @@ class Person:
         self.coord = coord
         self.redCount = 0
         self.riskTime = 0.0
-        self.updated = False
+        self.isUpdated = False
         self.isYellow = False
         self.missCount = 0
+
+    def reset(self, height, coord):
+        self.height = height
+        self.coord = coord
+        self.isUpdated = False
+        self.isYellow = False
+        self.missCount = 0
+        return
 
     def get_id(self):
         return self.id
@@ -59,9 +67,9 @@ class Person:
         return
 
     def is_updated(self):
-        return self.updated
+        return self.isUpdated
     def set_updated(self, value):
-        self.updated = value
+        self.isUpdated = value
         return
 
     def is_yellow(self):
@@ -182,13 +190,13 @@ class IdTable:
         self.groupCoordsList[parentIdx].append(personCoord)
         return
 
-    def update_person_red(self, index, frameTime):
+    def update_red(self, index, frameTime):
         if self.peopleList[index].is_updated():
             self.peopleList[index].inc_riskTime(frameTime)
             self.peopleList[index].set_updated(True)
         return
 
-    def update_person_yellow(self, index):
+    def update_yellow(self, index):
         self.peopleList[index].set_yellow(True)
         return
         
@@ -202,6 +210,7 @@ class FrameData:
         self.fps = 0.0
         self.tic = 0.0
         self.toc = 0.0
+        self.log = ""
 
     def get_people_len(self):
         return len(self.peopleList)
@@ -213,12 +222,10 @@ class FrameData:
         self.peopleList = peopleList[:]
         return
 
-    def get_person(self, index):
-        return self.peopleList[index]
-
-    def remove_person(self, index):
+    def poll_person(self, index):
+        person = self.peopleList[index]
         del self.peopleList[index]
-        return
+        return person
 
     def init_invalid(self):
         self.invalidIdList = set([person.get_id() for person in self.peopleList])
@@ -259,4 +266,15 @@ class FrameData:
         curr_fps = 1.0 / (self.toc - self.tic)
         self.fps = curr_fps if self.fps == 0.0 else (self.fps*0.95 + curr_fps*0.05)
         self.tic = self.toc
+        return
+
+    def get_log(self):
+        return self.log
+
+    def update_log(self, log):
+        self.log += log
+        return
+    
+    def clear_log(self):
+        self.log = ""
         return
