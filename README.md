@@ -5,7 +5,7 @@ This allows tracking people on the video, categorizing person as 'definite risk'
 ## Key features
 ### Model 
 The runtime on the table below is evaluated with 640 pixel demo video.
-<img src="demo/table-runtime-comparison.jpg" width="70%" height="70%"></img><br/>
+<img src="demo/table-runtime-analysis.jpg" width="70%" height="70%"></img><br/>
 
 Among these models, YOLOv4-tiny-3L showed the best balance between AP and FPS.
   
