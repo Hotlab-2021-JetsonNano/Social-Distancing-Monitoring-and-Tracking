@@ -220,3 +220,4 @@ def show_distancing(img, boxes, frameData):
     frameData.set_people(idTable.get_people())
 
     return img
+ 
