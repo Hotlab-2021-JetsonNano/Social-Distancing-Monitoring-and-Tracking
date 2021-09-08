@@ -36,6 +36,7 @@ def parse_args():
         help='output video file name')
     parser.add_argument(
         '-f', '--file', type=str, required=False,
+        default='output_file/testsample.txt',
         help='output text file name')
     parser.add_argument(
         '-c', '--category_num', type=int, default=80,
@@ -68,24 +69,54 @@ def loop_and_detect(cap, trt_yolo, conf_th, vis, writer, filePath):
 
     frameData = FrameData()
     frameData.set_timer()
+    frameTime1 = 0.0
+    frameTime2 = 0.0
+    totalTime1 = time.time()
+    isPrint = False
 
     while True:
         ret, frame = cap.read()
         if frame is None:  break
-        boxes, confs, clss = trt_yolo.detect(frame, conf_th)
 
-        frame, log = show_distancing(frame, boxes, frameData)
+        if frameData.get_counter() == 329:
+            isPrint = True
+
+        modelTime1 = time.time()
+        boxes, confs, clss = trt_yolo.detect(isPrint, frame, conf_th)
+        modelTime2 = time.time()
+
+        if isPrint:
+            isPrint = False      
+
+        frameTime1 = time.time()
+        frame = show_distancing(frame, boxes, frameData)
+        frameTime2 = time.time()
+
         frame = show_fps(frame, frameData.get_fps())
-
+        
+        writerTime1 = time.time()
         writer.write(frame)
-        file.write(log)
+        writerTime2 = time.time()
+        file.write(frameData.get_log())
 
         frameData.increase_counter()
         frameData.update_fps()
+        frameData.clear_log()
 
         print('.', end='', flush=True)
 
     file.close()
+
+    totalTime2 = time.time()
+    print("")
+    #print("conf_thres : ", '{:.1f}'.format(conf_th))
+    print("model : ", '{:.2f}'.format(round((modelTime2 - modelTime1) * 1000, 2)).rjust(10), "ms") ##
+    print("algo  : ", '{:.2f}'.format(round((frameTime2 - frameTime1) * 1000, 2)).rjust(10), "ms") ##
+    print("write : ", '{:.2f}'.format(round((writerTime2 - writerTime1) * 1000, 2)).rjust(10), "ms") ##
+    print("")
+    print("total : ", '{:.2f}'.format(round((totalTime2 - totalTime1), 2)).rjust(10), "s") ##
+    print("fps   : ", '{:.2f}'.format(round(frameData.get_fps(), 2)).rjust(10), "fps") ##
+
     print('\nDone.')
 
 
