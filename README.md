@@ -16,7 +16,7 @@ Since the model only has to detect human, we did transfer learning of YOLOv4-tin
 AP of the model improved.  
 (AP/FPS comparison datasheet)  
 ### Human Tracking
-<img src="demo/tracking.gif" width="70%" height="70%"></img><br/>
+<img src="demo/tracking.gif" width="50%" height="50%"></img><br/>
 
 ## Environment
 * Platform: Jetson Nano Developer Kit 4GB
