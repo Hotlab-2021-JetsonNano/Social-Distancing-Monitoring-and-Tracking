@@ -24,8 +24,8 @@ AP of the model improved.
 * Libraries: TensorRT, OpenCV, NumPy, PyCUDA, etc. (version needed)
 
 ## Demo Monitoring
+<img src="demo/video-monitoring-full.gif" width="70%" height="70%"></img><br/>
 
- 
 ## Demo Tracking
 <img src="demo/video-tracking-full.gif" width="70%" height="70%"></img><br/>
 
