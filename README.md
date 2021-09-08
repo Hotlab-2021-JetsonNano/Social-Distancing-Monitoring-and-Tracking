@@ -1,6 +1,6 @@
 # Social-Distancing-Monitoring-and-Tracking on AI Platform
-This is a project which implement high-quality social-distancing monitoring system on NVIDIA Jetson Nano.  #
-This allows tracking people on the video, categorizing person as 'definite risk' if he/she exceeds a 'threshold time' we set.
+This is a project which implement high-quality social-distancing monitoring system on NVIDIA Jetson Nano.  
+#This allows tracking people on the video, categorizing person as 'definite risk' if he/she exceeds a 'threshold time' we set.
 
 ## Key features
 ### Model
