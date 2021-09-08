@@ -27,7 +27,7 @@ AP of the model improved.
 
  
 ## Demo Tracking
-<img src="demo/tracking_full.gif" width="70%" height="70%"></img><br/>
+<img src="demo/video-tracking-full.gif" width="70%" height="70%"></img><br/>
 
 ## References
 * TensorRT demo code : https://github.com/jkjung-avt/tensorrt_demos
