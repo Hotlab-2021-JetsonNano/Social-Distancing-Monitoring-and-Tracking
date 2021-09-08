@@ -278,4 +278,3 @@ class FrameData:
     def clear_log(self):
         self.log = ""
         return
- 
