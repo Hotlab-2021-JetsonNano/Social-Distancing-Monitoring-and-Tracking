@@ -45,10 +45,10 @@ AP of the model improved.
 <img src="demo/video-monitoring-full.gif" width="70%" height="70%"></img><br/>
 
 ## Improvements
-- [ ] Consider Jetson Xavier as a platform
+- [x] Consider Jetson Xavier as a platform
 - [ ] Model Analysis of YOLOv4-tiny-3L
 - [ ] Mdoel Optimization of YOLOv4-tiny-3L
-- [ ] Algorithm Optimization with GPU Programming
+- [ ] Pipelining
 - [ ] Test on Real-time environment
 - [ ] Website streaming service using OpenCV, Flask
   
