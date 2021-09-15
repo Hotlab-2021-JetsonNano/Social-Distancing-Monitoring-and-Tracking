@@ -6,14 +6,14 @@ Implementation of TrtYOLO class with the yolo_layer plugins.
 
 from __future__ import print_function
 
-import pdb
 import ctypes
-import pdb
+
 import numpy as np
 import cv2
 import tensorrt as trt
 import pycuda.driver as cuda
-import time ##
+
+import pdb
 
 try:
     ctypes.cdll.LoadLibrary('./plugins/libyolo_layer.so')
@@ -149,7 +149,7 @@ def _postprocess_yolo(trt_outputs, img_w, img_h, conf_th, nms_threshold,
                 cls_detections = detections[idxs]
                 keep = _nms_boxes(cls_detections, nms_threshold)
                 nms_detections = np.concatenate(
-                    [nms_detections, cls_detections[keep]], axis=0)
+                    [nms_detections, cls_detections[keep]], axis=0) 
 
         xx = nms_detections[:, 0].reshape(-1, 1)
         yy = nms_detections[:, 1].reshape(-1, 1)
@@ -198,7 +198,6 @@ def allocate_buffers(engine):
     bindings = []
     output_idx = 0
     stream = cuda.Stream()
-    assert 3 <= len(engine) <= 5  # expect 1 input, plus 2~4 outpus
     for binding in engine:
         binding_dims = engine.get_binding_shape(binding)
         if len(binding_dims) == 4:
@@ -224,6 +223,8 @@ def allocate_buffers(engine):
             assert size % 7 == 0
             outputs.append(HostDeviceMem(host_mem, device_mem))
             output_idx += 1
+    assert len(inputs) == 1
+    assert len(outputs) == 1
     return inputs, outputs, bindings, stream
 
 
@@ -234,6 +235,7 @@ def do_inference(context, bindings, inputs, outputs, stream, batch_size=1):
     Inputs and outputs are expected to be lists of HostDeviceMem objects.
     """
     # Transfer input data to the GPU.
+    pdb.set_trace()
     [cuda.memcpy_htod_async(inp.device, inp.host, stream) for inp in inputs]
     # Run inference.
     context.execute_async(batch_size=batch_size,
@@ -306,19 +308,13 @@ class TrtYOLO(object):
         del self.inputs
         del self.stream
 
-    def detect(self, isPrint, img, conf_th, letter_box=None):
+    def detect(self, img, conf_th=0.3, letter_box=None):
         """Detect objects in the input image."""
         letter_box = self.letter_box if letter_box is None else letter_box
-
-        tic = time.time() ##
         img_resized = _preprocess_yolo(img, self.input_shape, letter_box)
-        toc = time.time() ##
-        if isPrint:
-            print("\npreprocessing  : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(7), "ms") ##
 
         # Set host input to the image. The do_inference() function
         # will copy the input to the GPU before executing.
-        tic = time.time() ##
         self.inputs[0].host = np.ascontiguousarray(img_resized)
         if self.cuda_ctx:
             self.cuda_ctx.push()
@@ -330,18 +326,15 @@ class TrtYOLO(object):
             stream=self.stream)
         if self.cuda_ctx:
             self.cuda_ctx.pop()
-        toc = time.time() ##
-        if isPrint:        
-            print("yolo_tensorrt  : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(7), "ms") ##
 
-        tic = time.time() ##   
+        return trt_outputs, letter_box
+    
+    def detect_post(self, img, conf_th, trt_outputs, letter_box):
         boxes, scores, classes = _postprocess_yolo(
             trt_outputs, img.shape[1], img.shape[0], conf_th,
             nms_threshold=0.5, input_shape=self.input_shape,
             letter_box=letter_box)
-        toc = time.time() ##
-        if isPrint:
-            print("postprocessing : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(7), "ms") ##
+
         # clip x1, y1, x2, y2 within original image
         boxes[:, [0, 2]] = np.clip(boxes[:, [0, 2]], 0, img.shape[1]-1)
         boxes[:, [1, 3]] = np.clip(boxes[:, [1, 3]], 0, img.shape[0]-1)
