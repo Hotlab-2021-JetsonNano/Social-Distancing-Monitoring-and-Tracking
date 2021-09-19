@@ -98,7 +98,7 @@ def grouping_algorithm(img, config, idTable, frameData):
         x, y = person.get_coord()
 
         ## Show Risk Time
-        cv2.putText(img, str(person.get_riskTime()), (x, y), 0, fontScale, color.black, fontThickness, lineType)
+        #cv2.putText(img, str(person.get_riskTime()), (x, y), 0, fontScale, color.black, fontThickness, lineType)
      
         ## Show Height
         # x1 = x - imgRatio
@@ -220,4 +220,3 @@ def show_distancing(img, boxes, frameData):
     frameData.set_people(idTable.get_people())
 
     return img
- 
