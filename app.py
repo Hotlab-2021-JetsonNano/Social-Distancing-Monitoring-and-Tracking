@@ -3,7 +3,10 @@ import argparse
 
 import pycuda.autoinit
 
+import pdb
+
 from utils.camera import add_camera_args
+from utils.camera import open_cam_gstr
 from utils.yolo_with_plugins import TrtYOLO
 from utils.distancing_class import FrameData
 from utils.distancing import show_distancing
@@ -40,14 +43,7 @@ args.model = 'yolov4-tiny-3l-crowd-416'
 args.video = 'source_video/people-640p.mp4'
 args.category_num = 80
 
-trt_yolo = TrtYOLO(args.model, args.category_num, args.letter_box, cuda_ctx=pycuda.autoinit.context)
-
-camera = cv2.VideoCapture(args.video)  # use 0 for web camera
-#  for cctv camera use rtsp://username:password@ip_address:554/user=username_password='password'_channel=channel_number_stream=0.sdp' instead of camera
-# for local webcam use cv2.VideoCapture(0)
-
-
-def gen_frames():  # generate frame by frame from camera
+def gen_frames(trt_yolo, camera):  # generate frame by frame from camera
     frameData = FrameData()
     frameData.set_timer()
 
@@ -57,7 +53,7 @@ def gen_frames():  # generate frame by frame from camera
         if not success:
             break
         else:
-            boxes, confs, clss = trt_yolo.detect(False, frame, 0.3)
+            boxes, confs, clss = trt_yolo.detect(frame, 0.3)
             frame = show_distancing(frame, boxes, frameData)
             # frame = frameData.show_fps(frame)
 
@@ -75,7 +71,16 @@ def gen_frames():  # generate frame by frame from camera
 @app.route('/video_feed')
 def video_feed():
     #Video streaming route. Put this in the src attribute of an img tag
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    
+    trt_yolo = TrtYOLO(args.model, args.category_num, args.letter_box, cuda_ctx=pycuda.autoinit.context)
+
+    #pdb.set_trace()
+    camera = cv2.VideoCapture(0)
+    #camera.set(cv2.cv.cv_CAP_PROP_FRAME_WIDTH, 640)
+    #camera.set(cv2.cv.cv_CAP_PROP_FRAME_HEIGHT, 480)
+    #pdb.set_trace()
+   
+    return Response(gen_frames(trt_yolo, camera), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 @app.route('/')
