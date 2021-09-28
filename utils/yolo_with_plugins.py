@@ -8,7 +8,6 @@ from __future__ import print_function
 
 import pdb
 import ctypes
-import pdb
 import numpy as np
 import cv2
 import tensorrt as trt
@@ -306,19 +305,14 @@ class TrtYOLO(object):
         del self.inputs
         del self.stream
 
-    def detect(self, isPrint, img, conf_th, letter_box=None):
+    def detect(self, img, conf_th=0.3, letter_box=None):
         """Detect objects in the input image."""
+        #pdb.set_trace()
         letter_box = self.letter_box if letter_box is None else letter_box
-
-        tic = time.time() ##
         img_resized = _preprocess_yolo(img, self.input_shape, letter_box)
-        toc = time.time() ##
-        if isPrint:
-            print("\npreprocessing  : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(7), "ms") ##
 
         # Set host input to the image. The do_inference() function
         # will copy the input to the GPU before executing.
-        tic = time.time() ##
         self.inputs[0].host = np.ascontiguousarray(img_resized)
         if self.cuda_ctx:
             self.cuda_ctx.push()
@@ -330,18 +324,12 @@ class TrtYOLO(object):
             stream=self.stream)
         if self.cuda_ctx:
             self.cuda_ctx.pop()
-        toc = time.time() ##
-        if isPrint:        
-            print("yolo_tensorrt  : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(7), "ms") ##
 
-        tic = time.time() ##   
         boxes, scores, classes = _postprocess_yolo(
             trt_outputs, img.shape[1], img.shape[0], conf_th,
             nms_threshold=0.5, input_shape=self.input_shape,
             letter_box=letter_box)
-        toc = time.time() ##
-        if isPrint:
-            print("postprocessing : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(7), "ms") ##
+
         # clip x1, y1, x2, y2 within original image
         boxes[:, [0, 2]] = np.clip(boxes[:, [0, 2]], 0, img.shape[1]-1)
         boxes[:, [1, 3]] = np.clip(boxes[:, [1, 3]], 0, img.shape[0]-1)
