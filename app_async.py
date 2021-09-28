@@ -70,8 +70,12 @@ def gen_frames():  # generate frame by frame from camera
     frameData.set_timer()
 
     while True:
-        frame, boxes = threadQueue.getThreadQueue()
-        threadQueue.signalMainThread()
+        frame, boxes, success = threadQueue.getThreadQueue()
+
+        if not success:
+            break
+        else:
+            threadQueue.signalMainThread()
 
         frame = show_distancing(frame, boxes, frameData)
         # frame = frameData.show_fps(frame)
@@ -105,5 +109,3 @@ if __name__ == '__main__':
 
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=False)
     trt_thread.stop()
-
-    
