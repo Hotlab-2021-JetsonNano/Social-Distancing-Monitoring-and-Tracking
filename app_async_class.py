@@ -47,7 +47,7 @@ class ThreadQueue:
     def getThreadQueue(self):
         success = not self.isImpossible() or not self.isEmpty()
         if not success:
-            self.destroy()
+            return None, None, success
         return self.imgQueue.get(), self.boxQueue.get(), success
 
     def signalMainThread(self):
