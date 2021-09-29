@@ -1,6 +1,7 @@
 import argparse
 
 import cv2
+import numpy
 import pycuda.autoinit  # This is needed for initializing CUDA driver
 
 import threading ## Added for async
@@ -27,7 +28,12 @@ def parse_args(VIDEO_SOURCE):
             '-l', '--letter_box', action='store_true',
             help='inference with letterboxed image [False]')
         args = parser.parse_args()
-        args.video = VIDEO_SOURCE
+
+        if VIDEO_SOURCE == 0:
+            args.usb = VIDEO_SOURCE
+        else:
+            args.video = VIDEO_SOURCE
+            
         return args
         
 
@@ -46,10 +52,24 @@ class YoloCamera:
         self.frameData = FrameData()
         self.frameData.set_timer()
 
+        BLACK_FRAME = numpy.zeros((360, 640), dtype=numpy.uint8)
+        BLACK_FRAME = cv2.putText(BLACK_FRAME, 'Sorry! No frame to show :(', (100, 200), 0, 1, (255, 255, 255), 3)
+        self.NO_FRAME = cv2.imencode('.jpg', BLACK_FRAME)[1].tobytes()
+
+    def thread_start(self):
+        self.trt_thread.start()
+        return
+
+    def thread_stop(self):
+        self.trt_thread.stop()
+        return
 
     def get_frame(self):
         frame, boxes, success = self.threadQueue.getThreadQueue()
         self.threadQueue.signalMainThread()
+
+        if not success:
+            return self.NO_FRAME
 
         frame = show_distancing(frame, boxes, self.frameData)
         frame = show_fps(frame, self.frameData.get_fps())
