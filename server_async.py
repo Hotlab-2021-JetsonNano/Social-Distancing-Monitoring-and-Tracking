@@ -1,16 +1,20 @@
 from server_async_core import YoloCamera as camera
 from flask import Flask, render_template, Response
 
-VIDEO_SOURCE = 'source_video/people-640p.mp4'
+VIDEO_SOURCE = 'source_video/people-640p.mp4'  # if video
+# VIDEO_SOURCE = 0  # if webcam
 
 app = Flask(__name__)
 
-
 def gen_frames(camera):  # generate frame by frame from camera
+    camera.thread_start()
+
     while True:
         frame = camera.get_frame()
         yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
+
+    camera.thread_stop()
 
 @app.route('/video_feed')
 def video_feed():
