@@ -1,15 +1,8 @@
-import cv2
-import numpy
-
 import threading ## Added for async
 import pycuda.driver as cuda ## Added for async
 import pycuda.autoinit  # This is needed for initializing CUDA driver
 
 from utils.yolo_with_plugins import TrtYOLO
-
-NO_FRAME = numpy.zeros((360, 640), dtype=numpy.uint8)
-NO_FRAME = cv2.putText(NO_FRAME, 'Sorry! No frame to show :(', (100, 200), 0, 1, (255, 255, 255), 3)
-NO_FRAME = cv2.imencode('.jpg', NO_FRAME)[1].tobytes()
 
 class TrtThread(threading.Thread):
     def __init__(self, condition, camera, args, threadQueue):
@@ -36,9 +29,11 @@ class TrtThread(threading.Thread):
             frame = self.camera.read()
 
             if frame is None:
-                self.threadQueue.putThreadQueue(NO_FRAME, [])
+                self.threadQueue.setThreadSuccess(False)
+                self.threadQueue.putThreadQueue(None, [])
             else:
                 boxes, confs, clss = self.trt_yolo.detect(frame, self.conf_th)
+                self.threadQueue.setThreadSuccess(True)
                 self.threadQueue.putThreadQueue(frame, boxes)
 
         del self.trt_yolo
@@ -59,6 +54,7 @@ class ThreadQueue:
     def __init__(self):
         self.imgQueue = Queue(1)
         self.boxQueue = Queue(1)
+        self.success = True
     
     def putThreadQueue(self, img, boxes):
         self.imgQueue.put(img)
@@ -66,10 +62,14 @@ class ThreadQueue:
         return
 
     def getThreadQueue(self):
-        return self.imgQueue.get(), self.boxQueue.get(), success
+        return self.imgQueue.get(), self.boxQueue.get(), self.success
 
     def signalMainThread(self):
         self.imgQueue.task_done()
+        return
+    
+    def setThreadSuccess(self, success):
+        self.success = success
         return
 
     def isEmpty(self):
